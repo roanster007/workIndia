@@ -12,3 +12,17 @@ class AdminAPIKeys(models.Model):
     hashed_key = models.CharField(max_length=64, db_index=True)
     date_issued = models.DateTimeField(default=timezone_now, null=False)
 
+
+class User(models.Model):
+    email = models.EmailField(max_length=254, unique=True)
+    password = models.CharField(max_length=30)
+    auth_token = models.CharField(max_length=64, null=True, blank=True)
+    token_issued = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["email", "password"],
+                name="email_pass_index",
+            ),
+        ]
