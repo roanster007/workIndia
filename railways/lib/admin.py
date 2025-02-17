@@ -3,8 +3,9 @@ import os
 import secrets
 import string
 
-from railways.models import AdminAPIKeys
+from railways.models import AdminAPIKeys, Train
 from django.conf import settings
+from django.http import JsonResponse
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -37,3 +38,18 @@ def check_if_key_exists(API_KEY):
     api_key_exists = AdminAPIKeys.objects.filter(hashed_key=key_hash).exists()
 
     return api_key_exists
+
+
+def maybe_add_train_data(source, destination, seats, API_KEY):
+    is_api__key_valid = check_if_key_exists(API_KEY)
+
+    if not is_api__key_valid:
+        return JsonResponse(
+            {"error": "Invalid API Key"}, status=400
+        )
+    
+    train, created = Train.objects.get_or_create(source=source, destination=destination, seats=seats)
+    return JsonResponse(
+        {"success": f"Train with id {train.id}successfully added"}
+    )
+
