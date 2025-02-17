@@ -1,0 +1,73 @@
+version: "3.8"
+
+services:
+  # Django app service
+  app:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./workIndia:/app/workIndia # Mount the entire project (settings and configuration) into the container
+      - ./railways:/app/railways # Mount your Django app into the container
+    command: >
+      sh -c "python3 manage.py migrate &&
+             python3 manage.py runserver 0.0.0.0:8000"
+    env_file:
+      - ./.env
+    depends_on:
+      - db
+      - redis
+
+  # Postgres service
+  db:
+    image: postgres:14-alpine
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: "workIndia"
+      POSTGRES_PASSWORD: "password"
+    env_file:
+      - ./.env
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Redis service
+  redis:
+    image: redis:alpine
+
+  # Celery worker service
+  celery:
+    restart: always
+    build:
+      context: .
+    command: celery -A workIndia worker -l info
+    volumes:
+      - ./workIndia:/app/workIndia # Mount the entire project (settings and configuration) into the container
+      - ./railways:/app/railways # Mount your Django app into the container
+    env_file:
+      - ./.env
+    depends_on:
+      - db
+      - redis
+      - app
+
+  # Celery Beat service
+  celerybeat:
+    restart: always
+    build:
+      context: .
+    command: celery -A workIndia beat -l info
+    volumes:
+      - ./workIndia:/app/workIndia # Mount the entire project (settings and configuration) into the container
+      - ./railways:/app/railways # Mount your Django app into the container
+    env_file:
+      - ./.env
+    depends_on:
+      - db
+      - redis
+      - app
+
+# Named volume for Postgres data persistence
+volumes:
+  pgdata:
