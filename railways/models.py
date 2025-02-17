@@ -9,7 +9,7 @@ from django.utils.timezone import now as timezone_now
 # For security concecerns, the API Keys are
 # stored as SHA-256 hashes.
 class AdminAPIKeys(models.Model):
-    hashed_key = models.CharField(max_length=64, db_index=True)
+    hashed_key = models.CharField(max_length=64, db_index=True, unique=True)
     date_issued = models.DateTimeField(default=timezone_now, null=False)
 
 
