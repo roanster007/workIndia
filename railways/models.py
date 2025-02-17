@@ -45,3 +45,28 @@ class Train(models.Model):
                 name="source_destination_index",
             ),
         ]
+
+
+class Bookings(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    train = models.ForeignKey(Train, on_delete=models.CASCADE)
+    source = models.PositiveIntegerField()
+    destination = models.PositiveIntegerField()
+    seats = models.PositiveIntegerField()
+    date = models.DateTimeField(default=timezone_now, null=False)
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["user"],
+                name="user_id_index",
+            ),
+            models.Index(
+                fields=["train"],
+                name="train_id_index",
+            ),
+            models.Index(
+                fields=["train", "source", "destination"],
+                name="train_source_dest_index",
+            ),
+        ]
