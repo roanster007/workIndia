@@ -26,3 +26,22 @@ class User(models.Model):
                 name="email_pass_index",
             ),
         ]
+
+
+# Each train is assumed to have a fixed path.
+# The source and destination are stored in the
+# form of the indices / ids of the nodes / stations
+# in that path.
+class Train(models.Model):
+    source = models.PositiveIntegerField()
+    destination = models.PositiveIntegerField()
+    seats = models.PositiveIntegerField()
+    date = models.DateTimeField(default=timezone_now, null=False)
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["source", "destination"],
+                name="source_destination_index",
+            ),
+        ]
