@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.timezone import now as timezone_now
 
+
 # This model stores the API Keys required
 # to access the admin panel, which proviedes
 # admin to perform various functionalities like
@@ -84,7 +85,6 @@ class Bookings(models.Model):
                 name="train_source_dest_index",
             ),
         ]
-    
 
     def to_dict(self):
         return {

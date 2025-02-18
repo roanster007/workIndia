@@ -26,5 +26,5 @@ urlpatterns = [
     path("register", csrf_exempt(Register.as_view()), name="register_user"),
     path("login", csrf_exempt(Login.as_view()), name="login_user"),
     path("booking", csrf_exempt(Bookings.as_view()), name="bookings"),
-    path("administartion", csrf_exempt(Admin.as_view()), name="admins_panel")
+    path("administartion", csrf_exempt(Admin.as_view()), name="admins_panel"),
 ]

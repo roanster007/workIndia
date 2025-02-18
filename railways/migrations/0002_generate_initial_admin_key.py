@@ -3,6 +3,7 @@
 from django.db import migrations
 from railways.lib.admin import generate_new_key
 
+
 def generate_initial_api_key(apps, schema_editor):
     generate_new_key(initial=True)
 

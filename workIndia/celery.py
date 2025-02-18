@@ -16,15 +16,17 @@ app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 
 # Update task routing and queues in configuration
 app.conf.update(
-    task_routes = {
-        'railways.tasks.celery.process_booking_information': {'queue': settings.BOOKING_PROCESSING_QUEUE},
-    },
-    task_queues = {
-        settings.BOOKING_PROCESSING_QUEUE: {
-            'exchange': 'bookings',
-            'binding_key': 'book',
+    task_routes={
+        "railways.tasks.celery.process_booking_information": {
+            "queue": settings.BOOKING_PROCESSING_QUEUE
         },
     },
-    task_serializer='json',
-    accept_content=['json'],
+    task_queues={
+        settings.BOOKING_PROCESSING_QUEUE: {
+            "exchange": "bookings",
+            "binding_key": "book",
+        },
+    },
+    task_serializer="json",
+    accept_content=["json"],
 )

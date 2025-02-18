@@ -1,6 +1,12 @@
 from django.http import JsonResponse
 from django.views import View
-from railways.lib.users import maybe_register_user, maybe_get_booking_details, maybe_process_booking, login_user
+from railways.lib.users import (
+    maybe_register_user,
+    maybe_get_booking_details,
+    maybe_process_booking,
+    login_user,
+)
+
 
 class Register(View):
     # Used to register a user
@@ -9,10 +15,8 @@ class Register(View):
         password = request.GET.get("password")
 
         if email is None or password is None:
-            return JsonResponse(
-                {"error": "Missing email or password!"}, status=400
-            )
-        
+            return JsonResponse({"error": "Missing email or password!"}, status=400)
+
         register_response = maybe_register_user(email, password)
         return register_response
 
@@ -24,13 +28,11 @@ class Login(View):
         password = request.GET.get("password")
 
         if email is None or password is None:
-            return JsonResponse(
-                {"error": "Missing email or password!"}, status=400
-            )
-        
+            return JsonResponse({"error": "Missing email or password!"}, status=400)
+
         login_response = login_user(email, password)
         return login_response
-    
+
 
 class Bookings(View):
     # Used to get booking information.
@@ -42,17 +44,14 @@ class Bookings(View):
             return JsonResponse(
                 {"error": "Missing booking id or auth token"}, status=400
             )
-        
+
         try:
             booking_id = int(booking_id)
         except ValueError:
-            return JsonResponse(
-                {"error": "Booking Id must be an integer"}, status=400
-            )
-        
+            return JsonResponse({"error": "Booking Id must be an integer"}, status=400)
+
         booking_details = maybe_get_booking_details(auth_token, booking_id)
         return booking_details
-
 
     # Used to make a booking.
     def post(self, request):
@@ -65,10 +64,8 @@ class Bookings(View):
         required_parameters = [auth_token, train_id, source, destination, seats]
 
         if None in required_parameters:
-            return JsonResponse(
-                {"error": "Incomplete details"}, status=400
-            )
-        
+            return JsonResponse({"error": "Incomplete details"}, status=400)
+
         try:
             train_id = int(train_id)
             source = int(source)
@@ -76,17 +73,12 @@ class Bookings(View):
             seats = int(seats)
         except ValueError:
             return JsonResponse(
-                {"error": "train id, source, destination and seats must be integers!"}, status=400
+                {"error": "train id, source, destination and seats must be integers!"},
+                status=400,
             )
-        
 
         booking_info = maybe_process_booking(
-            auth_token,
-            train_id,
-            source,
-            destination,
-            seats
+            auth_token, train_id, source, destination, seats
         )
 
         return booking_info
-        
