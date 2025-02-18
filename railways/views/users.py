@@ -51,3 +51,39 @@ class Bookings(View):
         
         booking_details = maybe_get_booking_details(auth_token, bookind_id)
         return booking_details
+
+
+    # Used to make a booking.
+    def post(self, request):
+        auth_token = request.GET.get("auth_token")
+        train_id = request.GET.get("train_id")
+        source = request.GET.get("source")
+        destination = request.GET.get("destination")
+        seats = request.GET.get("seats")
+
+        if None in auth_token, train_id, source, destination, seats:
+            return JsonResponse(
+                {"error": "Incomplete details"}, status=400
+            )
+        
+        try:
+            train_id = int(train_id)
+            source = int(source)
+            destination = int(destination)
+            seats = int(seats)
+        except ValueError:
+            return JsonResponse(
+                {"error": "train id, source, destination and seats must be integers!"}, status=400
+            )
+        
+
+        booking_info = maybe_process_booking(
+            auth_token,
+            train_id,
+            source,
+            destination,
+            seats
+        )
+
+        return booking_info
+        

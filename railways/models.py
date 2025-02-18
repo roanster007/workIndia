@@ -44,6 +44,10 @@ class Train(models.Model):
                 fields=["source", "destination"],
                 name="source_destination_index",
             ),
+            models.Index(
+                fields=["id"],
+                name="trains_id_index",
+            ),
         ]
 
 
