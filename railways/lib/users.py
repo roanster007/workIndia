@@ -2,12 +2,14 @@ import re
 import secrets
 import string
 import hashlib
+import time
 
-from railways.models import User, Bookings, Train
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Sum, F, Q
 from django.http import JsonResponse
 from django.utils.timezone import now as timezone_now
+from railways.models import User, Bookings, Train
 
 def maybe_register_user(email, password):
     if not is_valid_email(email):
@@ -19,7 +21,7 @@ def maybe_register_user(email, password):
 
     if not created:
         return JsonResponse(
-            {"error": "User already exists, please login!"}, status=400
+            {"error": "User already exists, please register!"}, status=400
         )
     
     return JsonResponse({"success": "Successfully registered! Please login to get auth token!"})
@@ -34,24 +36,26 @@ def login_user(email, password):
     user = User.objects.filter(email=email, password=password).first()
 
     if user is not None:
-        AUTH_TOKEN = generate_auth_token(user)
+        AUTH_TOKEN = generate_user_auth_token(user)
         return JsonResponse({"success": f"Successful Login! Auth Token - {AUTH_TOKEN}"})
     
     return JsonResponse(
         {"error": "User doesn't exist, Please login!"}, status=400
     )
 
-# RI==TODO: Update this to a timestamp.
-def generate_auth_token(user):
-    characters = string.ascii_letters + string.digits
-    AUTH_TOKEN = ''.join(secrets.choice(characters) for _ in range(ADMIN_API_KEY_LENGTH))
+
+# We are using the current timestamp to generate auth
+# tokens.
+def generate_user_auth_token(user):
+    timestamp = str(int(time.time()))
+    AUTH_TOKEN = timestamp[-settings.USER_AUTH_KEY_LENGTH:]
     
     sha256_hash = hashlib.sha256()
     sha256_hash.update(AUTH_TOKEN.encode('utf-8'))
     user.auth_token = AUTH_TOKEN
     user.token_issued = timezone_now()
 
-    user.save(["auth_token", "token_issued"])
+    user.save(update_fields=["auth_token", "token_issued"])
     return AUTH_TOKEN
 
 
@@ -127,7 +131,7 @@ def maybe_process_booking(
         # We lock rows to prevent races
         train = Train.objects.select_for_update().get(id=train_id)
 
-            booking = Bookings.objects.create(
+        booking = Bookings.objects.create(
             user=user,
             train_id=train_id,
             source=source,

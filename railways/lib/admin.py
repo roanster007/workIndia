@@ -2,6 +2,7 @@ import hashlib
 import os
 import secrets
 import string
+import time
 
 from railways.models import AdminAPIKeys, Train
 from django.conf import settings
@@ -10,19 +11,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# We generate the API Keys for authorities using
+# the current timestamp.
 def generate_new_key(initial=False):
-    characters = string.ascii_letters + string.digits
-
     if not initial:
-        API_KEY = ''.join(secrets.choice(characters) for _ in range(ADMIN_API_KEY_LENGTH))
+        timestamp = str(int(time.time()))
+        AUTH_TOKEN = timestamp[-settings.ADMIN_API_KEY_LENGTH:]
     else:
         API_KEY = os.getenv("INITIAL_API_KEY")
 
     HASHED_KEY = hash_api_key(API_KEY)
     API, created = AdminAPIKeys.objects.get_or_create(hashed_key=HASHED_KEY)
-
-    if not created:
-        generate_new_key()
     
     return API_KEY
 
@@ -41,6 +40,17 @@ def check_if_key_exists(API_KEY):
 
 
 def maybe_add_train_data(source, destination, seats, API_KEY):
+    # We assume the path is one way in this project.
+    if source < 0 or destination < 0 or destination <= source:
+        return JsonResponse(
+            {"error": "Invalid path"}, status=400
+        )
+    
+    if seats <= 0:
+        return JsonResponse(
+            {"error": "At least one seat must be picked!"}, status=400
+        )
+
     is_api__key_valid = check_if_key_exists(API_KEY)
 
     if not is_api__key_valid:
@@ -48,8 +58,8 @@ def maybe_add_train_data(source, destination, seats, API_KEY):
             {"error": "Invalid API Key"}, status=400
         )
     
-    train, created = Train.objects.get_or_create(source=source, destination=destination, seats=seats)
+    Train.objects.create(source=source, destination=destination, seats=seats)
     return JsonResponse(
-        {"success": f"Train with id {train.id}successfully added"}
+        {"success": f"Train successfully added"}
     )
 

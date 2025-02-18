@@ -18,7 +18,8 @@ class Register(View):
 
 
 class Login(View):
-    def post(self, request):
+    # Used to login users, and get the auth_token
+    def get(self, request):
         email = request.GET.get("email")
         password = request.GET.get("password")
 
@@ -45,7 +46,7 @@ class Bookings(View):
         try:
             bookind_id = int(bookind_id)
         except ValueError:
-            retrun JsonResponse(
+            return JsonResponse(
                 {"error": "Booking Id must be an integer"}, status=400
             )
         
@@ -61,7 +62,9 @@ class Bookings(View):
         destination = request.GET.get("destination")
         seats = request.GET.get("seats")
 
-        if None in auth_token, train_id, source, destination, seats:
+        required_parameters = [auth_token, train_id, source, destination, seats]
+
+        if None in required_parameters:
             return JsonResponse(
                 {"error": "Incomplete details"}, status=400
             )

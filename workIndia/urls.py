@@ -17,7 +17,14 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path
+from django.views.decorators.csrf import csrf_exempt
+from railways.views.users import Register, Login, Bookings
+from railways.views.admin import Admin
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("register", csrf_exempt(Register.as_view()), name="register_user"),
+    path("login", csrf_exempt(Login.as_view()), name="login_user"),
+    path("booking", csrf_exempt(Bookings.as_view()), name="bookings"),
+    path("administartion", csrf_exempt(Admin.as_view()), name="admins_panel")
 ]

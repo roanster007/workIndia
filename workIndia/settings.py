@@ -133,7 +133,8 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-ADMIN_API_KEY_LENGTH = 6
+ADMIN_API_KEY_LENGTH = 5
+USER_AUTH_KEY_LENGTH = 8
 
 # Redis settings
 REDIS_HOST = os.getenv("REDIS_HOST")

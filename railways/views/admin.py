@@ -5,12 +5,14 @@ from railways.lib.admin import maybe_add_train_data
 class Admin(View):
     # Used to add a train
     def post(self, request):
-        api_key = request.GET.get("API_KEY")
+        API_KEY = request.GET.get("API_KEY")
         source = request.GET.get("source")
         destination = request.GET.get("destination")
         seats = request.GET.get("seats")
 
-        if None in api_key, source, destination, seats:
+        required_parameters = [API_KEY, source, destination, seats]
+
+        if None in required_parameters:
             return JsonResponse(
                 {"error": "Incomplete Information"}, status=400
             )
@@ -23,4 +25,7 @@ class Admin(View):
             return JsonResponse(
                 {"error": "Source and Destination, and seats must be integers"}, status=400
             )
+        
+        response = maybe_add_train_data(source, destination, seats, API_KEY)
+        return response
         
