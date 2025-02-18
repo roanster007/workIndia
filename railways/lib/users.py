@@ -10,6 +10,7 @@ from django.db.models import Sum, F, Q
 from django.http import JsonResponse
 from django.utils.timezone import now as timezone_now
 from railways.models import User, Bookings, Train
+from railways.tasks.celery import process_booking_information
 
 def maybe_register_user(email, password):
     if not is_valid_email(email):
@@ -64,7 +65,7 @@ def is_valid_email(email):
     return re.fullmatch(EMAIL_REGEX, email) is not None
 
 
-def maybe_get_booking_details(auth_token, bookind_id):
+def maybe_get_booking_details(auth_token, booking_id):
     user = User.objects.filter(auth_token=auth_token).first()
 
     if user is None:
@@ -84,8 +85,13 @@ def maybe_get_booking_details(auth_token, bookind_id):
     return JsonResponse(booking_info)
 
 
-# TODO: Offload the tasks to a celery worker so that
-# the job becomes asynchronous.
+# We offload the load on server by validating each booking
+# and adding it to the BOOKING_PROCESSING_QUEUE, where the
+# Booking is finally processed asynchronously by celery workers
+# and updated.
+#
+# Users are returned with Bookings object, from which they
+# can check status of their booking.
 def maybe_process_booking(
     auth_token,
     train_id,
@@ -93,6 +99,17 @@ def maybe_process_booking(
     destination,
     seats
 ):
+    # We assume the path is one way in this project.
+    if source < 0 or destination < 0 or destination <= source:
+        return JsonResponse(
+            {"error": "Invalid path"}, status=400
+        )
+    
+    if seats <= 0:
+        return JsonResponse(
+            {"error": "At least one seat must be picked!"}, status=400
+        )
+
     user = User.objects.filter(auth_token=auth_token).first()
 
     if user is None:
@@ -100,43 +117,23 @@ def maybe_process_booking(
             {"error": "Invalid Auth token!"}, status=400
         )
     
-    available_seats = Train.objects.filter(id=train_id).select_related("seats").first()
-
-    if available_seats is None:
-        return JsonResponse(
-            {"error": "Train ID does not exist!"}, status=400
-        )
     
-    # We first aggregate all the booked seats between point A
-    # and B such that the source or destination is between point
-    # A and B.
-    #
-    # This allows us to estimate available seats for entirity of
-    # the journey.
-    booked_seats = Bookings.objects.filter(
-        Q(source__gte=source, source__lte=destination) |
-        Q(destination__gte=source, destination__lte=destination)
-    ).aggregate(
-        booked = Sum("seats")
+    # After we verify all the details, we create a Bookings
+    # row which contains the status of the booking, which
+    # users can use to check status of booking.
+    booking = Bookings.objects.create(
+        user=user,
+        train_id=train_id,
+        source=source,
+        destination=destination,
+        seats=seats,
+        status=Bookings.PENDING,
     )
 
-    if available_seats - booked_seats < seats:
-        return JsonResponse(
-            {"error": "Insufficient seats"}, status=400
-        )
+    process_booking_information.apply_async(args=[booking.to_dict()], queue=settings.BOOKING_PROCESSING_QUEUE)
     
-    # We want the transaction to be atomic -- if one step fails,
-    # entire transaction fails.
-    with transaction.atomic():
-        # We lock rows to prevent races
-        train = Train.objects.select_for_update().get(id=train_id)
-
-        booking = Bookings.objects.create(
-            user=user,
-            train_id=train_id,
-            source=source,
-            destination=destination,
-            seats=seats,
-        )
-    
-    return JsonResponse(booking.to_dict())
+    return JsonResponse(
+        {
+            "success": f"Your booking id {booking.id} is in process. Please check the status after some time using the id."
+        }
+    )

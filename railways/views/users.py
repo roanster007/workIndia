@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from django.views import View
-from railways.lib.users import maybe_register_user, maybe_get_booking_details, login_user
+from railways.lib.users import maybe_register_user, maybe_get_booking_details, maybe_process_booking, login_user
 
 class Register(View):
     # Used to register a user
@@ -36,21 +36,21 @@ class Bookings(View):
     # Used to get booking information.
     def get(self, request):
         auth_token = request.GET.get("auth_token")
-        booking_id = request.GET.get("bookind_id")
+        booking_id = request.GET.get("booking_id")
 
-        if auth_token is None or bookind_id is None:
+        if auth_token is None or booking_id is None:
             return JsonResponse(
                 {"error": "Missing booking id or auth token"}, status=400
             )
         
         try:
-            bookind_id = int(bookind_id)
+            booking_id = int(booking_id)
         except ValueError:
             return JsonResponse(
                 {"error": "Booking Id must be an integer"}, status=400
             )
         
-        booking_details = maybe_get_booking_details(auth_token, bookind_id)
+        booking_details = maybe_get_booking_details(auth_token, booking_id)
         return booking_details
 
 

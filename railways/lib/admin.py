@@ -48,7 +48,7 @@ def maybe_add_train_data(source, destination, seats, API_KEY):
     
     if seats <= 0:
         return JsonResponse(
-            {"error": "At least one seat must be picked!"}, status=400
+            {"error": "At least one seat must be added!"}, status=400
         )
 
     is_api__key_valid = check_if_key_exists(API_KEY)

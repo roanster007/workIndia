@@ -143,3 +143,12 @@ REDIS_DB = 0
 
 # Celery settings
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
+# Number of worker processes
+CELERYD_CONCURRENCY = 4
+# Workers fetch only one task at a time
+CELERYD_PREFETCH_MULTIPLIER = 1
+# Ensures a task is only removed after completion
+CELERY_TASK_ACKS_LATE = True
+
+BOOKING_PROCESSING_QUEUE = "booking_processing_queue"
+

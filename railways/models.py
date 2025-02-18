@@ -57,7 +57,13 @@ class Bookings(models.Model):
     source = models.PositiveIntegerField()
     destination = models.PositiveIntegerField()
     seats = models.PositiveIntegerField()
+    status = models.IntegerField(null=True)
     date = models.DateTimeField(default=timezone_now, null=False)
+
+    PENDING = 0
+    CONFIRMED = 1
+    # TODO: Pick a better name for it
+    CANCELLED = 2
 
     class Meta:
         indexes = [
@@ -87,4 +93,6 @@ class Bookings(models.Model):
             "source": self.source,
             "destination": self.destination,
             "seats": self.seats,
+            "status": self.status,
+            "id": self.id,
         }
