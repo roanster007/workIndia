@@ -135,6 +135,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 ADMIN_API_KEY_LENGTH = 5
 USER_AUTH_KEY_LENGTH = 8
+BOOKING_PROCESSING_QUEUE = "booking_processing_queue"
+
+SYNC_TRAIN_MANAGER_DATA_WITH_DB_TIME_PERIOD = 4
 
 # Redis settings
 REDIS_HOST = os.getenv("REDIS_HOST")
@@ -150,4 +153,9 @@ CELERYD_PREFETCH_MULTIPLIER = 1
 # Ensures a task is only removed after completion
 CELERY_TASK_ACKS_LATE = True
 
-BOOKING_PROCESSING_QUEUE = "booking_processing_queue"
+CELERY_BEAT_SCHEDULE = {
+    "sync_train_manager_data_job": {
+        "task": "railways.tasks.celery.sync_trains_data_with_db",
+        "schedule": SYNC_TRAIN_MANAGER_DATA_WITH_DB_TIME_PERIOD,
+    },
+}

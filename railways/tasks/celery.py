@@ -3,6 +3,7 @@ from django.db.models import Sum, F, Q
 from django.conf import settings
 from celery import shared_task
 from railways.models import Bookings, Train
+from railways.lib.train_manager import TrainManager
 
 
 @shared_task(queue=settings.BOOKING_PROCESSING_QUEUE)
@@ -76,3 +77,9 @@ def check_seat_availability(train_id, source, destination, seats):
         return False
 
     return True
+
+
+@shared_task
+def sync_trains_data_with_db():
+    train_manager = TrainManager()
+    train_manager.reload_trains_data()
