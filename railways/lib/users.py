@@ -3,7 +3,7 @@ import secrets
 import string
 import hashlib
 
-from railways.models import User
+from railways.models import User, Bookings
 from django.http import JsonResponse
 from django.utils.timezone import now as timezone_now
 
@@ -56,3 +56,23 @@ def generate_auth_token(user):
 def is_valid_email(email):
     EMAIL_REGEX = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
     return re.fullmatch(EMAIL_REGEX, email) is not None
+
+
+def maybe_get_booking_details(auth_token, bookind_id):
+    user = User.objects.filter(auth_token=auth_token).first()
+
+    if user is None:
+        return JsonResponse(
+            {"error": "Invalid Auth token!"}, status=400
+        )
+    
+    booking = Bookings.objects.filter(id=booking_id, user=user).first()
+
+    if booking is None:
+        return JsonResponse(
+            {"error": "No booking exists with the given credentials"}, status=400
+        )
+    
+    booking_info = booking.to_dict()
+
+    return JsonResponse(booking_info)

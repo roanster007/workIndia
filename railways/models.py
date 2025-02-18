@@ -16,7 +16,7 @@ class AdminAPIKeys(models.Model):
 class User(models.Model):
     email = models.EmailField(max_length=254, unique=True)
     password = models.CharField(max_length=30)
-    auth_token = models.CharField(max_length=64, null=True, blank=True)
+    auth_token = models.CharField(max_length=64, null=True, blank=True, db_index=True)
     token_issued = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -66,7 +66,21 @@ class Bookings(models.Model):
                 name="train_id_index",
             ),
             models.Index(
+                fields=["id", "user"],
+                name="book_id_user_index",
+            ),
+            models.Index(
                 fields=["train", "source", "destination"],
                 name="train_source_dest_index",
             ),
         ]
+    
+
+    def to_dict(self):
+        return {
+            "user_id": self.user.id,
+            "train": self.train.id,
+            "source": self.source,
+            "destination": self.destination,
+            "seats": self.seats,
+        }
