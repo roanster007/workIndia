@@ -6,12 +6,12 @@ import time
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Sum, F, Q
+from django.db.models import Sum, F, Q, Subquery, OuterRef
 from django.http import JsonResponse
 from django.utils.timezone import now as timezone_now
 from railways.models import User, Bookings, Train
+from django.db.models.functions import Coalesce
 from railways.tasks.celery import process_booking_information
-from railways.lib.train_manager import TrainManager
 
 
 def maybe_register_user(email, password):
@@ -98,15 +98,8 @@ def maybe_process_booking(auth_token, train_id, source, destination, seats):
 
     user = User.objects.filter(auth_token=auth_token).first()
 
-    # if user is None:
-    #     return JsonResponse({"error": "Invalid Auth token!"}, status=400)
-    
-
-    train_manager = TrainManager()
-    num_seats_available = train_manager.trains.get(train_id, 0)
-
-    if seats > num_seats_available:
-        return JsonResponse({"error": "Insufficient seats available in train!"}, status=400)
+    if user is None:
+        return JsonResponse({"error": "Invalid Auth token!"}, status=400)
 
     # After we verify all the details, we create a Bookings
     # row which contains the status of the booking, which
@@ -137,12 +130,28 @@ def maybe_get_available_seats(source, destination):
         return JsonResponse({"error": "Invalid path"}, status=400)
     
     available_trains = []
-    train_manager = TrainManager()
 
-    for train_id, seg_tree in train_manager.trains.items():
-        num_seats_available = seg_tree.query(0, source, destination)
+    booked_seats = Bookings.objects.filter(
+        Q(
+            status=Bookings.CONFIRMED,
+            source__gte=source,
+            source__lte=destination,
+        )
+        | Q(
+            status=Bookings.CONFIRMED,
+            destination__gte=source,
+            destination__lte=destination,
+        )
+    ).values("train_id").annotate(total_booked=Sum("seats"))
 
-        if num_seats_available > 0:
-            available_trains.append({"train_id": f"{train_id}", "seats": f"{num_seats_available}"})
+    subquery = Subquery(
+        booked_seats.filter(train_id=OuterRef("id")).values("total_booked")[:1]
+    )
+
+    available_trains = (
+        Train.objects.annotate(booked_seats=Coalesce(subquery, 0))
+        .filter(seats__gt=F("booked_seats"))
+        .values("id", "source", "destination", "seats", "booked_seats")
+    )
     
-    return JsonResponse({"trains": available_trains})
+    return JsonResponse({"trains": list(available_trains)})

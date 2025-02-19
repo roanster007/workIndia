@@ -162,7 +162,45 @@ response:
 }
 ```
 
-4. `administration`:
+4. `seats`:
+
+- **GET**
+  -- Takes in `source` and `destination` and returns seats available in each train for that path.
+
+example:
+
+```bash
+localhost:8000/seats?source=0&destination=1
+```
+
+```bash
+curl -X GET "http://localhost:8000/seats?source=0&destination=1"
+```
+
+response:
+
+```bash
+{
+    "trains": [
+        {
+            "id": 1,
+            "source": 0,
+            "destination": 1,
+            "seats": 50,
+            "booked_seats": 41
+        },
+        {
+            "id": 2,
+            "source": 0,
+            "destination": 1,
+            "seats": 50,
+            "booked_seats": 30
+        },
+    ]
+}
+```
+
+5. `administration`:
 
 - **POST**:
   -- Takes in API Key which is available with Admin authorities only, and use it to add new train by passing `source`, `destination`, and `seats` parameters.
