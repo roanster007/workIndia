@@ -18,7 +18,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from django.views.decorators.csrf import csrf_exempt
-from railways.views.users import Register, Login, Bookings
+from railways.views.users import Register, Login, Bookings, Seats
 from railways.views.admin import Admin
 
 urlpatterns = [
@@ -27,4 +27,5 @@ urlpatterns = [
     path("login", csrf_exempt(Login.as_view()), name="login_user"),
     path("booking", csrf_exempt(Bookings.as_view()), name="bookings"),
     path("administartion", csrf_exempt(Admin.as_view()), name="admins_panel"),
+    path("seats", csrf_exempt(Seats.as_view()), name="seats_available"),
 ]

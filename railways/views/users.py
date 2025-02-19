@@ -4,6 +4,7 @@ from railways.lib.users import (
     maybe_register_user,
     maybe_get_booking_details,
     maybe_process_booking,
+    maybe_get_available_seats,
     login_user,
 )
 
@@ -82,3 +83,26 @@ class Bookings(View):
         )
 
         return booking_info
+
+class Seats(View):
+    # Used to obtain available seats
+    # between two stations in various
+    # trains.
+    def get(self, request):
+        source = request.GET.get("source")
+        destination = request.GET.get("destination")
+
+        if source is None or destination is None:
+            return JsonResponse(
+                {"error": "source and destination can not be None"}, status=400
+            )
+        
+        try:
+            source = int(source)
+            destination = int(destination)
+        except ValueError:
+            return JsonResponse({"error": "source and destination must be of integer values"}, status=400)
+        
+        response = maybe_get_available_seats(source, destination)
+        return response
+        

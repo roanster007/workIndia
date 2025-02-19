@@ -11,6 +11,7 @@ from django.http import JsonResponse
 from django.utils.timezone import now as timezone_now
 from railways.models import User, Bookings, Train
 from railways.tasks.celery import process_booking_information
+from railways.lib.train_manager import TrainManager
 
 
 def maybe_register_user(email, password):
@@ -97,8 +98,15 @@ def maybe_process_booking(auth_token, train_id, source, destination, seats):
 
     user = User.objects.filter(auth_token=auth_token).first()
 
-    if user is None:
-        return JsonResponse({"error": "Invalid Auth token!"}, status=400)
+    # if user is None:
+    #     return JsonResponse({"error": "Invalid Auth token!"}, status=400)
+    
+
+    train_manager = TrainManager()
+    num_seats_available = train_manager.trains.get(train_id, 0)
+
+    if seats > num_seats_available:
+        return JsonResponse({"error": "Insufficient seats available in train!"}, status=400)
 
     # After we verify all the details, we create a Bookings
     # row which contains the status of the booking, which
@@ -121,3 +129,20 @@ def maybe_process_booking(auth_token, train_id, source, destination, seats):
             "success": f"Your booking id {booking.id} is in process. Please check the status after some time using the id."
         }
     )
+
+
+def maybe_get_available_seats(source, destination):
+    # We assume the path is one way in this project.
+    if source < 0 or destination < 0 or destination <= source:
+        return JsonResponse({"error": "Invalid path"}, status=400)
+    
+    available_trains = []
+    train_manager = TrainManager()
+
+    for train_id, seg_tree in train_manager.trains.items():
+        num_seats_available = seg_tree.query(0, source, destination)
+
+        if num_seats_available > 0:
+            available_trains.append({"train_id": f"{train_id}", "seats": f"{num_seats_available}"})
+    
+    return JsonResponse({"trains": available_trains})
