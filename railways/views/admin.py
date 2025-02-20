@@ -35,6 +35,6 @@ class Admin(View):
 
         if API_KEY is None:
             return JsonResponse({"error": "API Key is missing"}, status=400)
-        
+
         response = maybe_get_train_data(API_KEY)
         return response

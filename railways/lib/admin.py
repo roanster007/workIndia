@@ -62,8 +62,8 @@ def maybe_get_train_data(API_KEY):
 
     if not is_api_key_valid:
         return JsonResponse({"error": "Invalid API Key"}, status=400)
-    
+
     trains = Train.objects.all()
     train_data = [train.to_dict() for train in trains]
-    
+
     return JsonResponse({"trains": train_data})

@@ -50,13 +50,13 @@ class Train(models.Model):
                 name="trains_id_index",
             ),
         ]
-    
+
     def to_dict(self):
         return {
             "id": self.id,
             "source": self.source,
             "destination": self.destination,
-            "seats": self.seats
+            "seats": self.seats,
         }
 
 

@@ -76,4 +76,3 @@ def check_seat_availability(train_id, source, destination, seats):
         return False
 
     return True
-

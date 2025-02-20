@@ -84,6 +84,7 @@ class Bookings(View):
 
         return booking_info
 
+
 class Seats(View):
     # Used to obtain available seats
     # between two stations in various
@@ -96,13 +97,15 @@ class Seats(View):
             return JsonResponse(
                 {"error": "source and destination can not be None"}, status=400
             )
-        
+
         try:
             source = int(source)
             destination = int(destination)
         except ValueError:
-            return JsonResponse({"error": "source and destination must be of integer values"}, status=400)
-        
+            return JsonResponse(
+                {"error": "source and destination must be of integer values"},
+                status=400,
+            )
+
         response = maybe_get_available_seats(source, destination)
         return response
-        

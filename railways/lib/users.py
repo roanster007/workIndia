@@ -128,21 +128,25 @@ def maybe_get_available_seats(source, destination):
     # We assume the path is one way in this project.
     if source < 0 or destination < 0 or destination <= source:
         return JsonResponse({"error": "Invalid path"}, status=400)
-    
+
     available_trains = []
 
-    booked_seats = Bookings.objects.filter(
-        Q(
-            status=Bookings.CONFIRMED,
-            source__gte=source,
-            source__lte=destination,
+    booked_seats = (
+        Bookings.objects.filter(
+            Q(
+                status=Bookings.CONFIRMED,
+                source__gte=source,
+                source__lte=destination,
+            )
+            | Q(
+                status=Bookings.CONFIRMED,
+                destination__gte=source,
+                destination__lte=destination,
+            )
         )
-        | Q(
-            status=Bookings.CONFIRMED,
-            destination__gte=source,
-            destination__lte=destination,
-        )
-    ).values("train_id").annotate(total_booked=Sum("seats"))
+        .values("train_id")
+        .annotate(total_booked=Sum("seats"))
+    )
 
     subquery = Subquery(
         booked_seats.filter(train_id=OuterRef("id")).values("total_booked")[:1]
@@ -153,5 +157,5 @@ def maybe_get_available_seats(source, destination):
         .filter(seats__gt=F("booked_seats"))
         .values("id", "source", "destination", "seats", "booked_seats")
     )
-    
+
     return JsonResponse({"trains": list(available_trains)})
