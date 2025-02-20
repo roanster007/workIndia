@@ -273,6 +273,8 @@ curl -X GET "http://localhost:8000/seats?source=0&destination=1"
 
 ## **5. Train Management (`/administration`)**
 
+- **ADMIN API KEY** - `DEF123`
+
 ### **Method:** `POST`
 
 Adds a new train. Requires an API key for authentication.
