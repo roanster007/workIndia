@@ -48,10 +48,22 @@ def maybe_add_train_data(source, destination, seats, API_KEY):
     if seats <= 0:
         return JsonResponse({"error": "At least one seat must be added!"}, status=400)
 
-    is_api__key_valid = check_if_key_exists(API_KEY)
+    is_api_key_valid = check_if_key_exists(API_KEY)
 
-    if not is_api__key_valid:
+    if not is_api_key_valid:
         return JsonResponse({"error": "Invalid API Key"}, status=400)
 
     Train.objects.create(source=source, destination=destination, seats=seats)
     return JsonResponse({"success": f"Train successfully added"})
+
+
+def maybe_get_train_data(API_KEY):
+    is_api_key_valid = check_if_key_exists(API_KEY)
+
+    if not is_api_key_valid:
+        return JsonResponse({"error": "Invalid API Key"}, status=400)
+    
+    trains = Train.objects.all()
+    train_data = [train.to_dict() for train in trains]
+    
+    return JsonResponse({"trains": train_data})

@@ -24,12 +24,12 @@ Tech Stack:
 
 ## Tech Stack
 
-- **Language**: Python
-- **Framework**: Django
-- **Database**: PostgreSQL
+- **Python**
+- **Django**
+- **PostgreSQL**
 - **Celery**
-- **Message Broker**: Redis
-- **Formatting**: Black
+- **Redis**
+- **Black**
 
 ## How to setup and run locally (With Docker)
 
@@ -40,6 +40,12 @@ Tech Stack:
 ```
 
 2. **Rename `.env.dev` to `.env`**
+
+3. **Disable any postgres instance running locally (Sometimes it interrupts with the one in the Docker Image)**
+
+```bash
+sudo systemctl stop postgresql
+```
 
 3. **Build the docker image:**
 
@@ -57,21 +63,35 @@ docker-compose up
 
 This will spin up the server. The API is accessible at `localhost:8000`.
 
-## Troubleshooting
+## Architecture
 
-- Please terminate any locally running Postges instance in case it is running, since sometimes it seems to interfere with the one running in the container.
+1. A user can make requests as per the API endpoints described below.
+2. A user can choose a source and destination of trip and can get list of trains available between the source and destination, with at least one ticket.
+   -- For simplicity purposes, each station the train travels to is assumed to be an index in range **[0, n]**, where n is the maximum destination index among destination of all trains.
+   -- **source < destination** for all the trains.
+3. Then, a user can choose to book certain number of seats for a particular train id. In return, a user gets a **Booking ID**, and user's request is added to a processing queue in **Redis**, which is picked up and processed by **Celery** Workers.
+4. The **Booking ID** servers as a medium, through which users can check whether their Booking is `CONFIRMED`, `PENDING`, OR `CANCELLED`.
+5. Offloading processing to **Celery** makes jobs asynchronous and reduces load on server.
+   **NOTE that database rows are locked while updating Booking rows for processing ticket, preventing RACES.**
+
+6. Towards the Admin Panel, admins can use an existing API Key, and add new trains between two points, and number of seats it has. They can also get list of all the operating stations.
 
 ## API Endpoints
 
-1. `register`:
+## **1. User Registration (`/register`)**
 
-- **POST**: Used to register a user using email and password.
+### **Method:** `POST`
 
-example:
+Registers a new user using email and password.
 
-```bash
-localhost:8000/register?email=a@gmail.com&password=hello
-```
+### **Request Format**
+
+- **Content-Type:** `application/x-www-form-urlencoded`
+- **Body Parameters:**
+  - `email` (string, required) – User's email address.
+  - `password` (string, required) – User's password.
+
+### **Example Request**
 
 ```bash
 curl -X POST "http://localhost:8000/register" \
@@ -87,142 +107,237 @@ response:
 }
 ```
 
-2. `login`:
+## **1. User Registration (`/register`)**
 
-- **GET**: Logs in user using email id and password, and returns and Authorization token using which they can book tickets, or check booking status.
+### **Method:** `POST`
 
-example:
+Registers a new user using email and password.
+
+### **Request Format**
+
+- **Content-Type:** `application/x-www-form-urlencoded`
+- **Body Parameters:**
+  - `email` (string, required) – User's email address.
+  - `password` (string, required) – User's password.
+
+### **Example Request**
 
 ```bash
-localhost:8000/login?email=a@gmail.com&password=hello
+curl -X POST "http://localhost:8000/register"      -d "email=a@gmail.com&password=hello"      -H "Content-Type: application/x-www-form-urlencoded"
 ```
+
+### **Response**
+
+```json
+{
+  "success": "Successfully registered! Please login to get auth token!"
+}
+```
+
+---
+
+## **2. User Login (`/login`)**
+
+### **Method:** `GET`
+
+Logs in a user using email and password, returning an authentication token.
+
+### **Request Format**
+
+- **Query Parameters:**
+  - `email` (string, required) – User's email address.
+  - `password` (string, required) – User's password.
+
+### **Example Request**
 
 ```bash
 curl -X GET "http://localhost:8000/login?email=a@gmail.com&password=hello"
 ```
 
-response:
+### **Response**
 
-```bash
+```json
 {
-    "success": "Successful Login! Auth Token - 39896666"
+  "success": "Successful Login! Auth Token - 39896666"
 }
 ```
 
-3. `booking`:
+---
 
-- **GET**: Used to get booking status. Takes in auth token of user and booking id.
+## **3. Booking Status (`/booking`)**
 
-example:
+### **Method:** `GET`
 
-```bash
-localhost:8000/booking?auth_token=39896666&booking_id=5
-```
+Retrieves booking status using `auth_token` and `booking_id`.
+
+### **Request Format**
+
+- **Query Parameters:**
+  - `auth_token` (string, required) – User's authentication token.
+  - `booking_id` (integer, required) – ID of the booking.
+
+### **Example Request**
 
 ```bash
 curl -X GET "http://localhost:8000/booking?auth_token=39896666&booking_id=5"
 ```
 
-response:
+### **Response**
 
-```bash
+```json
 {
-    "user_id": 1,
-    "train": 1,
-    "source": 0,
-    "destination": 1,
-    "seats": 1,
-    "status": 1,
-    "id": 5
+  "user_id": 1,
+  "train": 1,
+  "source": 0,
+  "destination": 1,
+  "seats": 1,
+  "status": 1,
+  "id": 5
 }
 ```
 
-- **POST**:
-  -- Used to book ticket. Takes in `train_id`, `source`, `destination`, `seats` (number of seats to book) and `auth token`, and returns booking id to check status of booking.
+---
 
--- Note that booking is not immediately processed -- it is first added to the Booking Processing Queue, from where it is picked up by a Celery Worker Asynchronously and processed. Hence, a booking id is returned to users, using which they can keep checking booking status.
+### **Method:** `POST`
 
-example:
+Books a ticket. Booking is added to a queue and processed asynchronously.
+
+### **Request Format**
+
+- **Content-Type:** `application/x-www-form-urlencoded`
+- **Body Parameters:**
+  - `auth_token` (string, required) – User's authentication token.
+  - `train_id` (integer, required) – Train ID for booking.
+  - `source` (integer, required) – Source station index.
+  - `destination` (integer, required) – Destination station index.
+  - `seats` (integer, required) – Number of seats to book.
+
+### **Example Request**
 
 ```bash
-localhost:8000/booking?auth_token=39896666&train_id=1&source=0&destination=1&seats=1
+curl -X POST "http://localhost:8000/booking"      -H "Content-Type: application/x-www-form-urlencoded"      -d "auth_token=39896666&train_id=1&source=0&destination=1&seats=1"
 ```
 
-```bash
-curl -X POST "http://localhost:8000/booking" \
-     -H "Content-Type: application/x-www-form-urlencoded" \
-     -d "auth_token=39896666&train_id=1&source=0&destination=1&seats=1"
-```
+### **Response**
 
-response:
-
-```bash
+```json
 {
-    "success": "Your booking id 5 is in process. Please check the status after some time using the id."
+  "success": "Your booking id 5 is in process. Please check the status after some time using the id."
 }
 ```
 
-4. `seats`:
+---
 
-- **GET**
-  -- Takes in `source` and `destination` and returns seats available in each train for that path.
+## **4. Seat Availability (`/seats`)**
 
-example:
+### **Method:** `GET`
 
-```bash
-localhost:8000/seats?source=0&destination=1
-```
+Fetches available seats for a given route.
+
+### **Request Format**
+
+- **Query Parameters:**
+  - `source` (integer, required) – Source station index.
+  - `destination` (integer, required) – Destination station index.
+
+### **Example Request**
 
 ```bash
 curl -X GET "http://localhost:8000/seats?source=0&destination=1"
 ```
 
-response:
+### **Response**
 
-```bash
+```json
 {
-    "trains": [
-        {
-            "id": 1,
-            "source": 0,
-            "destination": 1,
-            "seats": 50,
-            "booked_seats": 41
-        },
-        {
-            "id": 2,
-            "source": 0,
-            "destination": 1,
-            "seats": 50,
-            "booked_seats": 30
-        },
-    ]
+  "trains": [
+    {
+      "id": 1,
+      "source": 0,
+      "destination": 1,
+      "seats": 50,
+      "booked_seats": 41
+    },
+    {
+      "id": 2,
+      "source": 0,
+      "destination": 1,
+      "seats": 50,
+      "booked_seats": 30
+    }
+  ]
 }
 ```
 
-5. `administration`:
+---
 
-- **POST**:
-  -- Takes in API Key which is available with Admin authorities only, and use it to add new train by passing `source`, `destination`, and `seats` parameters.
-  -- Initial API Key can be assumed to be `INITIAL_API_KEY = "DEF123"`
+## **5. Train Management (`/administration`)**
 
-example:
+### **Method:** `POST`
+
+Adds a new train. Requires an API key for authentication.
+
+### **Request Format**
+
+- **Content-Type:** `application/x-www-form-urlencoded`
+- **Body Parameters:**
+  - `API_KEY` (string, required) – Admin API key.
+  - `source` (integer, required) – Source station index.
+  - `destination` (integer, required) – Destination station index.
+  - `seats` (integer, required) – Number of available seats.
+
+### **Example Request**
 
 ```bash
-localhost:8000/administartion?API_KEY=DEF123&source=1&destination=2&seats=50
+curl -X POST "http://localhost:8000/administration"      -H "Content-Type: application/x-www-form-urlencoded"      -d "API_KEY=DEF123&source=1&destination=2&seats=50"
 ```
 
-```bash
-curl -X POST "http://localhost:8000/administartion" \
-     -H "Content-Type: application/x-www-form-urlencoded" \
-     -d "API_KEY=DEF123&source=1&destination=2&seats=50"
+### **Response**
 
-```
-
-response:
-
-```bash
+```json
 {
-    "success": "Train successfully added"
+  "success": "Train successfully added"
+}
+```
+
+### **Method:** `GET`
+
+Fetches list of all the trains running.
+
+### **Request Format**
+
+- **Query Parameters:**
+  - `API_KEY` (string, required) – Admin API key.
+
+### **Example Request**
+
+```bash
+curl -X GET "http://localhost:8000/administartion?API_KEY=DEF123"
+```
+
+### **Response**
+
+```json
+{
+  "trains": [
+    {
+      "id": 1,
+      "source": 0,
+      "destination": 1,
+      "seats": 50
+    },
+    {
+      "id": 2,
+      "source": 0,
+      "destination": 1,
+      "seats": 50
+    },
+    {
+      "id": 3,
+      "source": 1,
+      "destination": 2,
+      "seats": 50
+    }
+  ]
 }
 ```

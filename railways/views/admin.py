@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from django.views import View
-from railways.lib.admin import maybe_add_train_data
+from railways.lib.admin import maybe_add_train_data, maybe_get_train_data
 
 
 class Admin(View):
@@ -27,4 +27,14 @@ class Admin(View):
             )
 
         response = maybe_add_train_data(source, destination, seats, API_KEY)
+        return response
+
+    # Used to get information of all the Trains running.
+    def get(self, request):
+        API_KEY = request.GET.get("API_KEY")
+
+        if API_KEY is None:
+            return JsonResponse({"error": "API Key is missing"}, status=400)
+        
+        response = maybe_get_train_data(API_KEY)
         return response
